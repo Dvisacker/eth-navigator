@@ -1,0 +1,13 @@
+[package]
+name = "kleptoman"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+ethers = { version = "2.0.14", features = ["abigen", "ws", "rustls" ] }
+tokio = { version = "1.36.0", features = ["full"] }
+eyre = "0.6.6"
+dotenv = "0.15.0"
+clap = { version = "4.0.5", features = ["derive"] }
+once_cell = "1.18.0"
+prettytable-rs = "0.10.0"
