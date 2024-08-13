@@ -1712,6 +1712,7 @@ dependencies = [
  "ethers",
  "eyre",
  "once_cell",
+ "openzeppelin-rs",
  "prettytable-rs",
  "serde",
  "serde_json",
@@ -1951,6 +1952,17 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "openzeppelin-rs"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13ab80af631935dccfd54a2d2be5f8458c7433b49c117d64d9c78f67bb846280"
+dependencies = [
+ "ethers-contract",
+ "ethers-core",
+ "ethers-providers",
 ]
 
 [[package]]

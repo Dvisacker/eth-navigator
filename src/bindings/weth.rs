@@ -1,4 +1,4 @@
-pub use pool::*;
+pub use weth::*;
 /// This module was auto-generated with ethers-rs Abigen.
 /// More information at: <https://github.com/gakonst/ethers-rs>
 #[allow(
@@ -9,7 +9,7 @@ pub use pool::*;
     dead_code,
     non_camel_case_types,
 )]
-pub mod pool {
+pub mod weth {
     #[allow(deprecated)]
     fn __abi() -> ::ethers::core::abi::Abi {
         ::ethers::core::abi::ethabi::Contract {
@@ -387,32 +387,32 @@ pub mod pool {
         }
     }
     ///The parsed JSON ABI of the contract.
-    pub static POOL_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> = ::ethers::contract::Lazy::new(
+    pub static WETH_ABI: ::ethers::contract::Lazy<::ethers::core::abi::Abi> = ::ethers::contract::Lazy::new(
         __abi,
     );
-    pub struct Pool<M>(::ethers::contract::Contract<M>);
-    impl<M> ::core::clone::Clone for Pool<M> {
+    pub struct WETH<M>(::ethers::contract::Contract<M>);
+    impl<M> ::core::clone::Clone for WETH<M> {
         fn clone(&self) -> Self {
             Self(::core::clone::Clone::clone(&self.0))
         }
     }
-    impl<M> ::core::ops::Deref for Pool<M> {
+    impl<M> ::core::ops::Deref for WETH<M> {
         type Target = ::ethers::contract::Contract<M>;
         fn deref(&self) -> &Self::Target {
             &self.0
         }
     }
-    impl<M> ::core::ops::DerefMut for Pool<M> {
+    impl<M> ::core::ops::DerefMut for WETH<M> {
         fn deref_mut(&mut self) -> &mut Self::Target {
             &mut self.0
         }
     }
-    impl<M> ::core::fmt::Debug for Pool<M> {
+    impl<M> ::core::fmt::Debug for WETH<M> {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple(::core::stringify!(Pool)).field(&self.address()).finish()
+            f.debug_tuple(::core::stringify!(WETH)).field(&self.address()).finish()
         }
     }
-    impl<M: ::ethers::providers::Middleware> Pool<M> {
+    impl<M: ::ethers::providers::Middleware> WETH<M> {
         /// Creates a new contract instance with the specified `ethers` client at
         /// `address`. The contract derefs to a `ethers::Contract` object.
         pub fn new<T: Into<::ethers::core::types::Address>>(
@@ -422,7 +422,7 @@ pub mod pool {
             Self(
                 ::ethers::contract::Contract::new(
                     address.into(),
-                    POOL_ABI.clone(),
+                    WETH_ABI.clone(),
                     client,
                 ),
             )
@@ -561,12 +561,12 @@ pub mod pool {
         /// Returns an `Event` builder for all the events of this contract.
         pub fn events(
             &self,
-        ) -> ::ethers::contract::builders::Event<::std::sync::Arc<M>, M, PoolEvents> {
+        ) -> ::ethers::contract::builders::Event<::std::sync::Arc<M>, M, WETHEvents> {
             self.0.event_with_filter(::core::default::Default::default())
         }
     }
     impl<M: ::ethers::providers::Middleware> From<::ethers::contract::Contract<M>>
-    for Pool<M> {
+    for WETH<M> {
         fn from(contract: ::ethers::contract::Contract<M>) -> Self {
             Self::new(contract.address(), contract.client())
         }
@@ -641,32 +641,32 @@ pub mod pool {
     }
     ///Container type for all of the contract's events
     #[derive(Clone, ::ethers::contract::EthAbiType, Debug, PartialEq, Eq, Hash)]
-    pub enum PoolEvents {
+    pub enum WETHEvents {
         ApprovalFilter(ApprovalFilter),
         DepositFilter(DepositFilter),
         TransferFilter(TransferFilter),
         WithdrawalFilter(WithdrawalFilter),
     }
-    impl ::ethers::contract::EthLogDecode for PoolEvents {
+    impl ::ethers::contract::EthLogDecode for WETHEvents {
         fn decode_log(
             log: &::ethers::core::abi::RawLog,
         ) -> ::core::result::Result<Self, ::ethers::core::abi::Error> {
             if let Ok(decoded) = ApprovalFilter::decode_log(log) {
-                return Ok(PoolEvents::ApprovalFilter(decoded));
+                return Ok(WETHEvents::ApprovalFilter(decoded));
             }
             if let Ok(decoded) = DepositFilter::decode_log(log) {
-                return Ok(PoolEvents::DepositFilter(decoded));
+                return Ok(WETHEvents::DepositFilter(decoded));
             }
             if let Ok(decoded) = TransferFilter::decode_log(log) {
-                return Ok(PoolEvents::TransferFilter(decoded));
+                return Ok(WETHEvents::TransferFilter(decoded));
             }
             if let Ok(decoded) = WithdrawalFilter::decode_log(log) {
-                return Ok(PoolEvents::WithdrawalFilter(decoded));
+                return Ok(WETHEvents::WithdrawalFilter(decoded));
             }
             Err(::ethers::core::abi::Error::InvalidData)
         }
     }
-    impl ::core::fmt::Display for PoolEvents {
+    impl ::core::fmt::Display for WETHEvents {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             match self {
                 Self::ApprovalFilter(element) => ::core::fmt::Display::fmt(element, f),
@@ -676,22 +676,22 @@ pub mod pool {
             }
         }
     }
-    impl ::core::convert::From<ApprovalFilter> for PoolEvents {
+    impl ::core::convert::From<ApprovalFilter> for WETHEvents {
         fn from(value: ApprovalFilter) -> Self {
             Self::ApprovalFilter(value)
         }
     }
-    impl ::core::convert::From<DepositFilter> for PoolEvents {
+    impl ::core::convert::From<DepositFilter> for WETHEvents {
         fn from(value: DepositFilter) -> Self {
             Self::DepositFilter(value)
         }
     }
-    impl ::core::convert::From<TransferFilter> for PoolEvents {
+    impl ::core::convert::From<TransferFilter> for WETHEvents {
         fn from(value: TransferFilter) -> Self {
             Self::TransferFilter(value)
         }
     }
-    impl ::core::convert::From<WithdrawalFilter> for PoolEvents {
+    impl ::core::convert::From<WithdrawalFilter> for WETHEvents {
         fn from(value: WithdrawalFilter) -> Self {
             Self::WithdrawalFilter(value)
         }
@@ -856,7 +856,7 @@ pub mod pool {
     }
     ///Container type for all of the contract's call
     #[derive(Clone, ::ethers::contract::EthAbiType, Debug, PartialEq, Eq, Hash)]
-    pub enum PoolCalls {
+    pub enum WETHCalls {
         Allowance(AllowanceCall),
         Approve(ApproveCall),
         BalanceOf(BalanceOfCall),
@@ -869,7 +869,7 @@ pub mod pool {
         TransferFrom(TransferFromCall),
         Withdraw(WithdrawCall),
     }
-    impl ::ethers::core::abi::AbiDecode for PoolCalls {
+    impl ::ethers::core::abi::AbiDecode for WETHCalls {
         fn decode(
             data: impl AsRef<[u8]>,
         ) -> ::core::result::Result<Self, ::ethers::core::abi::AbiError> {
@@ -932,7 +932,7 @@ pub mod pool {
             Err(::ethers::core::abi::Error::InvalidData.into())
         }
     }
-    impl ::ethers::core::abi::AbiEncode for PoolCalls {
+    impl ::ethers::core::abi::AbiEncode for WETHCalls {
         fn encode(self) -> Vec<u8> {
             match self {
                 Self::Allowance(element) => {
@@ -963,7 +963,7 @@ pub mod pool {
             }
         }
     }
-    impl ::core::fmt::Display for PoolCalls {
+    impl ::core::fmt::Display for WETHCalls {
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
             match self {
                 Self::Allowance(element) => ::core::fmt::Display::fmt(element, f),
@@ -980,57 +980,57 @@ pub mod pool {
             }
         }
     }
-    impl ::core::convert::From<AllowanceCall> for PoolCalls {
+    impl ::core::convert::From<AllowanceCall> for WETHCalls {
         fn from(value: AllowanceCall) -> Self {
             Self::Allowance(value)
         }
     }
-    impl ::core::convert::From<ApproveCall> for PoolCalls {
+    impl ::core::convert::From<ApproveCall> for WETHCalls {
         fn from(value: ApproveCall) -> Self {
             Self::Approve(value)
         }
     }
-    impl ::core::convert::From<BalanceOfCall> for PoolCalls {
+    impl ::core::convert::From<BalanceOfCall> for WETHCalls {
         fn from(value: BalanceOfCall) -> Self {
             Self::BalanceOf(value)
         }
     }
-    impl ::core::convert::From<DecimalsCall> for PoolCalls {
+    impl ::core::convert::From<DecimalsCall> for WETHCalls {
         fn from(value: DecimalsCall) -> Self {
             Self::Decimals(value)
         }
     }
-    impl ::core::convert::From<DepositCall> for PoolCalls {
+    impl ::core::convert::From<DepositCall> for WETHCalls {
         fn from(value: DepositCall) -> Self {
             Self::Deposit(value)
         }
     }
-    impl ::core::convert::From<NameCall> for PoolCalls {
+    impl ::core::convert::From<NameCall> for WETHCalls {
         fn from(value: NameCall) -> Self {
             Self::Name(value)
         }
     }
-    impl ::core::convert::From<SymbolCall> for PoolCalls {
+    impl ::core::convert::From<SymbolCall> for WETHCalls {
         fn from(value: SymbolCall) -> Self {
             Self::Symbol(value)
         }
     }
-    impl ::core::convert::From<TotalSupplyCall> for PoolCalls {
+    impl ::core::convert::From<TotalSupplyCall> for WETHCalls {
         fn from(value: TotalSupplyCall) -> Self {
             Self::TotalSupply(value)
         }
     }
-    impl ::core::convert::From<TransferCall> for PoolCalls {
+    impl ::core::convert::From<TransferCall> for WETHCalls {
         fn from(value: TransferCall) -> Self {
             Self::Transfer(value)
         }
     }
-    impl ::core::convert::From<TransferFromCall> for PoolCalls {
+    impl ::core::convert::From<TransferFromCall> for WETHCalls {
         fn from(value: TransferFromCall) -> Self {
             Self::TransferFrom(value)
         }
     }
-    impl ::core::convert::From<WithdrawCall> for PoolCalls {
+    impl ::core::convert::From<WithdrawCall> for WETHCalls {
         fn from(value: WithdrawCall) -> Self {
             Self::Withdraw(value)
         }
