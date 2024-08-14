@@ -1,14 +1,16 @@
 mod addressbook;
 mod bindings;
+mod bridge;
 mod config;
 mod encoder;
-mod handlers;
+mod evm_interface;
 mod signer_middleware;
 mod utils;
 
+use bridge::lifi::LiFiBridge;
 use clap::{Args, Parser, Subcommand};
 use dotenv::dotenv;
-use ethers::types::U256;
+use evm_interface::EVMInterface;
 
 #[derive(Parser)]
 struct Cli {
@@ -33,6 +35,12 @@ enum Command {
     GetERC20Balance(GetERC20BalanceArgs),
     SendETH(SendETHArgs),
     SendERC20(SendERC20Args),
+    GetSupportedChains,
+    GetKnownTokens(GetKnownTokensArgs),
+    RequestRoutes(RequestRoutesArgs),
+    RequestQuote(RequestQuoteArgs),
+    GetTransferStatus(GetTransferStatusArgs),
+    GetConnections(GetConnectionsArgs),
 }
 
 #[derive(Args)]
@@ -139,6 +147,76 @@ struct SendERC20Args {
     network: String,
 }
 
+#[derive(Args)]
+struct GetKnownTokensArgs {
+    #[clap(long)]
+    chain: String,
+}
+
+#[derive(Args)]
+struct RequestRoutesArgs {
+    #[clap(long)]
+    from_chain_id: u64,
+    #[clap(long)]
+    to_chain_id: u64,
+    #[clap(long)]
+    from_token_address: String,
+    #[clap(long)]
+    to_token_address: String,
+    #[clap(long)]
+    from_amount: String,
+    #[clap(long)]
+    from_address: String,
+    #[clap(long)]
+    to_address: String,
+}
+
+#[derive(Args)]
+struct RequestQuoteArgs {
+    #[clap(long)]
+    from_chain: String,
+    #[clap(long)]
+    to_chain: String,
+    #[clap(long)]
+    from_token: String,
+    #[clap(long)]
+    to_token: String,
+    #[clap(long)]
+    from_amount: String,
+    #[clap(long)]
+    from_address: String,
+    #[clap(long)]
+    to_address: String,
+}
+
+#[derive(Args)]
+struct GetTransferStatusArgs {
+    #[clap(long)]
+    tx_hash: String,
+    #[clap(long)]
+    from_chain: Option<String>,
+    #[clap(long)]
+    to_chain: Option<String>,
+    #[clap(long)]
+    bridge: Option<String>,
+}
+
+#[derive(Args)]
+struct GetConnectionsArgs {
+    #[clap(long)]
+    from_chain: Option<String>,
+    #[clap(long)]
+    to_chain: Option<String>,
+    #[clap(long)]
+    from_token: Option<String>,
+    #[clap(long)]
+    to_token: Option<String>,
+    #[clap(long)]
+    from_amount: Option<String>,
+    #[clap(long)]
+    allow_exchanges: Option<bool>,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -146,67 +224,138 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     match cli.command {
         Command::GetBlockNumber(args) => {
-            let network = args.network;
-            handlers::get_block_number(network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_block_number().await?;
         }
         Command::SubscribeBlocks(args) => {
-            handlers::subscribe_blocks(args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.subscribe_blocks().await?;
         }
         Command::SubscribePendingTransactions(args) => {
-            handlers::subscribe_pending_transactions(args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.subscribe_pending_transactions().await?;
         }
         Command::GetGasPrice(args) => {
-            handlers::get_gas_price(args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_gas_price().await?;
         }
         Command::GetBalance(args) => {
-            handlers::get_balance(args.address, args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_balance(args.address).await?;
         }
         Command::GetNonce(args) => {
-            handlers::get_nonce(args.address, args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_nonce(args.address).await?;
         }
         Command::GetBlockDetails(args) => {
-            handlers::get_block_details(args.block_number, args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_block_details(args.block_number).await?;
         }
         Command::SubscribeLogs(args) => {
-            handlers::subscribe_logs(args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.subscribe_logs().await?;
         }
         Command::GetTxDetails(args) => {
-            handlers::get_tx_details(args.tx_hash, args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_tx_details(args.tx_hash).await?;
         }
         Command::GenerateContractBindings(args) => {
+            let evm_interface = EVMInterface::new(&args.network).await?;
             println!(
                 "Generating contract bindings for {} on {}",
                 args.contract_address, args.network
             );
-            handlers::generate_contract_bindings(
-                args.contract_address,
-                args.contract_name,
-                args.network,
-            )
-            .await?;
+            evm_interface
+                .generate_contract_bindings(args.contract_address, args.contract_name)
+                .await?;
         }
         Command::GenerateSourceCode(args) => {
-            handlers::generate_source_code(args.contract_address, args.contract_name, args.network)
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface
+                .generate_source_code(args.contract_address, args.contract_name)
                 .await?;
         }
         Command::GetERC20Balance(args) => {
-            handlers::get_erc_20_balances(args.network, args.wallet_address, args.token_address)
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface
+                .get_erc_20_balances(args.wallet_address, args.token_address)
                 .await?;
         }
         Command::WrapETH(args) => {
-            handlers::wrap_eth(args.amount, args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.wrap_eth(args.amount).await?;
         }
         Command::SendETH(args) => {
-            handlers::send_eth(args.to_address, args.amount, args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.send_eth(args.to_address, args.amount).await?;
         }
         Command::SendERC20(args) => {
-            handlers::send_erc20(
-                args.token_address,
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface
+                .send_erc20(args.token_address, args.to_address, args.amount)
+                .await?;
+        }
+        Command::GetSupportedChains => {
+            let bridge = LiFiBridge::new();
+            let chains = bridge.get_supported_chains().await?;
+            println!("Supported chains: {:?}", chains);
+        }
+        Command::GetKnownTokens(args) => {
+            let bridge = LiFiBridge::new();
+            let tokens = bridge.get_known_tokens(&args.chain).await?;
+            println!("Known tokens on {}: {:?}", args.chain, tokens);
+        }
+        Command::RequestRoutes(args) => {
+            let bridge = LiFiBridge::new();
+            let request = bridge::RouteRequest::new(
+                args.from_chain_id,
+                args.to_chain_id,
+                args.from_token_address,
+                args.to_token_address,
+                args.from_amount,
+                args.from_address,
                 args.to_address,
-                args.amount,
-                args.network,
-            )
-            .await?;
+            );
+            let routes = bridge.request_routes(request).await?;
+            println!("Available routes: {:?}", routes);
+        }
+        Command::RequestQuote(args) => {
+            let bridge = LiFiBridge::new();
+            let request = bridge::QuoteRequest::new(
+                args.from_chain,
+                args.to_chain,
+                args.from_token,
+                args.to_token,
+                args.from_amount,
+                args.from_address,
+                args.to_address,
+            );
+            let quote = bridge.request_quote(request).await?;
+            println!("Quote: {:?}", quote);
+        }
+        Command::GetTransferStatus(args) => {
+            let bridge = LiFiBridge::new();
+            let request = bridge::StatusRequest::new(
+                args.bridge,
+                args.from_chain,
+                args.to_chain,
+                args.tx_hash,
+            );
+            let status = bridge.get_transfer_status(request).await?;
+            println!("Transfer status: {:?}", status);
+        }
+        Command::GetConnections(args) => {
+            let bridge = LiFiBridge::new();
+            let request = bridge::ConnectionsRequest::new(
+                args.from_chain,
+                args.to_chain,
+                args.from_token,
+                args.to_token,
+                args.from_amount,
+                args.allow_exchanges,
+            );
+            let connections = bridge.get_connections(request).await?;
+            println!("Available connections: {:?}", connections);
         }
         _ => {
             println!("Unsupported command");

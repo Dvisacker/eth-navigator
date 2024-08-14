@@ -11,6 +11,7 @@ use std::{collections::HashMap, env, sync::Arc};
 use crate::signer_middleware::setup_signer;
 
 pub struct ChainConfig {
+    pub chain: Chain,
     pub chain_id: u64,
     pub explorer_url: String,
     pub explorer_api_key: String,
@@ -43,6 +44,7 @@ pub async fn get_chain_config(chain: Chain) -> ChainConfig {
             let middleware = setup_signer(http_provider.clone()).await;
             let ws_provider = Provider::<Ws>::connect(ws_url).await.unwrap();
             return ChainConfig {
+                chain,
                 chain_id: 1,
                 explorer_url: "https://etherscan.io".to_string(),
                 explorer_api_key: "TCZS3DYFANPFZRPFY338CCKHTMF5QNMCG9".to_string(),
@@ -58,10 +60,27 @@ pub async fn get_chain_config(chain: Chain) -> ChainConfig {
             let middleware = setup_signer(http_provider.clone()).await;
             let ws_provider = Provider::<Ws>::connect(ws_url).await.unwrap();
             return ChainConfig {
+                chain,
                 chain_id: 42161,
                 explorer_url: "https://arbiscan.io".to_string(),
                 explorer_api_key: "".to_string(),
                 explorer_api_url: "https://api.arbiscan.io/api".to_string(),
+                http: Arc::new(middleware),
+                ws: Arc::new(ws_provider),
+            };
+        }
+        Chain::Optimism => {
+            let url = env::var("OPTIMISM_RPC_URL").expect("OPTIMISM_RPC_URL is not set");
+            let ws_url = env::var("OPTIMISM_WS_URL").expect("OPTIMISM_WS_URL is not set");
+            let http_provider = Provider::<Http>::try_from(url).unwrap();
+            let middleware = setup_signer(http_provider.clone()).await;
+            let ws_provider = Provider::<Ws>::connect(ws_url).await.unwrap();
+            return ChainConfig {
+                chain,
+                chain_id: 10,
+                explorer_url: "https://optimistic.etherscan.io".to_string(),
+                explorer_api_key: "".to_string(),
+                explorer_api_url: "https://api-optimistic.etherscan.io/api".to_string(),
                 http: Arc::new(middleware),
                 ws: Arc::new(ws_provider),
             };
