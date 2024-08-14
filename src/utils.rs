@@ -1,5 +1,23 @@
+use crate::bridge::lifi_types::LifiChain;
+use ethers::types::Transaction;
 use ethers::types::{Block, H256};
 use prettytable::{Cell, Row, Table};
+
+pub fn format_terminal_link(url: &str, text: &str) -> String {
+    format!("\x1B]8;;{}\x1B\\{}\x1B]8;;\x1B\\", url, text)
+}
+
+pub fn format_explorer_address_abbreviated(explorer_link: &str, address: &str) -> String {
+    format_terminal_link(&format!("{}/address/{}", explorer_link, address), &address)
+}
+
+pub fn format_explorer_address_link(explorer_link: &str, address: &str) -> String {
+    format!("{}/address/{}", explorer_link, address)
+}
+
+pub fn abbreviate_address(address: &str) -> String {
+    format!("{}...{}", &address[..6], &address[address.len() - 4..])
+}
 
 pub fn print_block_details(block: &Block<H256>) {
     let mut table = Table::new();
@@ -52,8 +70,6 @@ pub fn print_block_details(block: &Block<H256>) {
     table.printstd();
 }
 
-use ethers::types::Transaction;
-
 pub fn print_tx_details(tx: &Transaction) {
     let mut table = Table::new();
     table.add_row(Row::new(vec![
@@ -90,9 +106,49 @@ pub fn print_tx_details(tx: &Transaction) {
         Cell::new(&format!("{:?}", tx.gas)),
     ]));
     table.add_row(Row::new(vec![
-        Cell::new("Input"),
-        Cell::new(&format!("{:?}", tx.input)),
+        Cell::new("Link"),
+        Cell::new(&format_terminal_link(
+            &format!("https://etherscan.io/tx/{:?}", tx.hash),
+            "Etherscan",
+        )),
     ]));
+
+    table.printstd();
+}
+
+pub fn print_lifi_chains(chains: &[LifiChain]) {
+    let mut table = Table::new();
+
+    table.add_row(Row::new(vec![
+        Cell::new("Key").style_spec("b"),
+        Cell::new("Name").style_spec("b"),
+        Cell::new("Chain Type").style_spec("b"),
+        Cell::new("Coin").style_spec("b"),
+        Cell::new("ID").style_spec("b"),
+        Cell::new("Explorer").style_spec("b"),
+        Cell::new("Multicall Address").style_spec("b"),
+    ]));
+
+    for chain in chains {
+        let explorer_link = chain
+            .metamask
+            .block_explorer_urls
+            .first()
+            .map(String::as_str)
+            .unwrap_or("");
+
+        let multicall_link = &format_explorer_address_link(explorer_link, &chain.multicall_address);
+
+        table.add_row(Row::new(vec![
+            Cell::new(&chain.key),
+            Cell::new(&chain.name),
+            Cell::new(&chain.chain_type),
+            Cell::new(&chain.coin),
+            Cell::new(&chain.id.to_string()),
+            Cell::new(&explorer_link.to_string()),
+            Cell::new(&multicall_link.to_string()),
+        ]));
+    }
 
     table.printstd();
 }

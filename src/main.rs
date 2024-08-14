@@ -5,9 +5,9 @@ mod config;
 mod encoder;
 mod evm_interface;
 mod signer_middleware;
+mod ui;
 mod utils;
 
-use bridge::lifi::LiFiBridge;
 use clap::{Args, Parser, Subcommand};
 use dotenv::dotenv;
 use evm_interface::EVMInterface;
@@ -217,6 +217,9 @@ struct GetConnectionsArgs {
     allow_exchanges: Option<bool>,
 }
 
+use crate::bridge::lifi_types::LifiChain;
+use crate::utils::print_lifi_chains;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
@@ -296,18 +299,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?;
         }
         Command::GetSupportedChains => {
-            let bridge = LiFiBridge::new();
+            let bridge = bridge::lifi::LiFiBridge::new();
             let chains = bridge.get_supported_chains().await?;
-            println!("Supported chains: {:?}", chains);
+            print_lifi_chains(&chains);
         }
         Command::GetKnownTokens(args) => {
-            let bridge = LiFiBridge::new();
+            let bridge = bridge::lifi::LiFiBridge::new();
             let tokens = bridge.get_known_tokens(&args.chain).await?;
             println!("Known tokens on {}: {:?}", args.chain, tokens);
         }
         Command::RequestRoutes(args) => {
-            let bridge = LiFiBridge::new();
-            let request = bridge::RouteRequest::new(
+            let bridge = bridge::lifi::LiFiBridge::new();
+            let request = bridge::lifi_types::RouteRequest::new(
                 args.from_chain_id,
                 args.to_chain_id,
                 args.from_token_address,
@@ -320,8 +323,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Available routes: {:?}", routes);
         }
         Command::RequestQuote(args) => {
-            let bridge = LiFiBridge::new();
-            let request = bridge::QuoteRequest::new(
+            let bridge = bridge::lifi::LiFiBridge::new();
+            let request = bridge::lifi_types::QuoteRequest::new(
                 args.from_chain,
                 args.to_chain,
                 args.from_token,
@@ -334,8 +337,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Quote: {:?}", quote);
         }
         Command::GetTransferStatus(args) => {
-            let bridge = LiFiBridge::new();
-            let request = bridge::StatusRequest::new(
+            let bridge = bridge::lifi::LiFiBridge::new();
+            let request = bridge::lifi_types::StatusRequest::new(
                 args.bridge,
                 args.from_chain,
                 args.to_chain,
@@ -345,8 +348,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             println!("Transfer status: {:?}", status);
         }
         Command::GetConnections(args) => {
-            let bridge = LiFiBridge::new();
-            let request = bridge::ConnectionsRequest::new(
+            let bridge = bridge::lifi::LiFiBridge::new();
+            let request = bridge::lifi_types::ConnectionsRequest::new(
                 args.from_chain,
                 args.to_chain,
                 args.from_token,

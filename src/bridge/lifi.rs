@@ -19,8 +19,8 @@ impl LiFiBridge {
     pub async fn get_supported_chains(&self) -> Result<Vec<LifiChain>, Box<dyn Error>> {
         let url = format!("{}/chains", LIFI_API_URL);
         let response = self.client.get(&url).send().await?;
-        let chains: Vec<LifiChain> = response.json().await?;
-        Ok(chains)
+        let json: LifiAPIChainResponse = response.json().await?;
+        Ok(json.chains)
     }
 
     pub async fn get_known_tokens(&self, chain: &str) -> Result<Vec<Token>, Box<dyn Error>> {

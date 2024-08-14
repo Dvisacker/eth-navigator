@@ -1,35 +1,41 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LifiAPIChainResponse {
+    pub chains: Vec<LifiChain>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LifiChain {
-    key: String,
-    name: String,
-    chain_type: String, // renamed from chainType
-    coin: String,
-    id: u64,
-    mainnet: bool,
-    logo_uri: String,                 // renamed from logoURI
-    tokenlist_url: String,            // renamed from tokenlistUrl
-    multicall_address: String,        // renamed from multicallAddress
-    faucet_urls: Option<Vec<String>>, // added for optional faucet URLs
-    metamask: Metamask,               // new struct for metamask details
-    native_token: Token,              // new struct for native token details
+    pub key: String,
+    pub name: String,
+    pub chain_type: String, // renamed from chainType
+    pub coin: String,
+    pub id: u64,
+    pub mainnet: bool,
+    pub logo_URI: String,                 // renamed from logoURI
+    pub tokenlist_url: Option<String>,    // renamed from tokenlistUrl
+    pub multicall_address: String,        // renamed from multicallAddress
+    pub faucet_urls: Option<Vec<String>>, // added for optional faucet URLs
+    pub metamask: Metamask,               // new struct for metamask details
+    pub native_token: Token,              // new struct for native token details
 }
 
 // New struct for Metamask details
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Metamask {
-    chain_id: String,                 // renamed from chainId
-    block_explorer_urls: Vec<String>, // renamed from blockExplorerUrls
-    chain_name: String,               // renamed from chainName
-    native_currency: NativeCurrency,  // new struct for native currency details
-    rpc_urls: Vec<String>,            // renamed from rpcUrls
+    pub chain_id: String,                 // renamed from chainId
+    pub block_explorer_urls: Vec<String>, // renamed from blockExplorerUrls
+    pub chain_name: String,               // renamed from chainName
+    pub native_currency: NativeCurrency,  // new struct for native currency details
+    pub rpc_urls: Vec<String>,            // renamed from rpcUrls
 }
 
 // New struct for Native Currency details
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NativeCurrency {
     name: String,
@@ -37,7 +43,7 @@ pub struct NativeCurrency {
     decimals: u8,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Token {
     chain_id: u64,
@@ -45,12 +51,12 @@ pub struct Token {
     symbol: String,
     name: String,
     decimals: u8,
-    price_usd: String,
+    price_USD: String,
     coin_key: String,
-    logo_uri: Option<String>,
+    logo_URI: Option<String>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RouteRequest {
     from_chain_id: u64,
