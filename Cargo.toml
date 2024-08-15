@@ -3,6 +3,9 @@ name = "kleptoman"
 version = "0.1.0"
 edition = "2021"
 
+[build]
+incremental = true
+
 [dependencies]
 ethers = { version = "2.0.14", features = ["abigen", "ws", "rustls", "etherscan" ] }
 tokio = { version = "1.36.0", features = ["full"] }

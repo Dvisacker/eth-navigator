@@ -307,4 +307,122 @@ impl EVMInterface {
 
         Ok(())
     }
+
+    pub async fn get_transactions(
+        &self,
+        address: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let address = Address::from_str(&address)?;
+        let transactions = self.find_all_transactions(address).await?;
+
+        println!("Transactions for address {} on {}:", address, self.network);
+        utils::print_txs(&transactions);
+
+        Ok(())
+    }
+
+    async fn find_all_transactions(
+        &self,
+        address: Address,
+    ) -> Result<Vec<Transaction>, Box<dyn std::error::Error>> {
+        let mut end = self.config.http.get_block_number().await?;
+        let mut start = end - 1000000;
+
+        while start <= end {
+            let mid = (start + end) / 2;
+            if self.has_transactions(address, mid).await? {
+                end = mid - 1;
+            } else {
+                start = mid + 1;
+            }
+        }
+
+        let first_block = start;
+        let mut transactions = Vec::new();
+
+        // Exponential search forward
+        let mut block = first_block;
+        let mut step = U64::from(1);
+        loop {
+            let block_txs = self.get_address_transactions(address, block).await?;
+            if block_txs.is_empty() {
+                // Binary search in the last interval
+                let last_with_tx = self
+                    .binary_search_last_with_tx(address, block - step, block)
+                    .await?;
+                transactions.extend(
+                    self.get_all_txs_in_range(address, first_block, last_with_tx)
+                        .await?,
+                );
+                break;
+            }
+            transactions.extend(block_txs);
+            block += step;
+            step *= 2;
+        }
+
+        Ok(transactions.into_iter().collect())
+    }
+
+    async fn has_transactions(
+        &self,
+        address: Address,
+        block_number: U64,
+    ) -> Result<bool, Box<dyn std::error::Error>> {
+        let block = self.config.http.get_block_with_txs(block_number).await?;
+        Ok(block.map_or(false, |b| {
+            b.transactions
+                .iter()
+                .any(|tx| tx.from == address || tx.to == Some(address))
+        }))
+    }
+
+    async fn get_address_transactions(
+        &self,
+        address: Address,
+        block_number: U64,
+    ) -> Result<Vec<Transaction>, Box<dyn std::error::Error>> {
+        let block = self.config.http.get_block_with_txs(block_number).await?;
+        Ok(block.map_or(Vec::new(), |b| {
+            b.transactions
+                .into_iter()
+                .filter(|tx| tx.from == address || tx.to == Some(address))
+                .collect()
+        }))
+    }
+
+    async fn binary_search_last_with_tx(
+        &self,
+        address: Address,
+        mut start: U64,
+        mut end: U64,
+    ) -> Result<U64, Box<dyn std::error::Error>> {
+        while start <= end {
+            let mid = (start + end) / 2;
+            if self.has_transactions(address, mid).await? {
+                start = mid + 1;
+            } else {
+                end = mid - 1;
+            }
+        }
+        Ok(end)
+    }
+
+    async fn get_all_txs_in_range(
+        &self,
+        address: Address,
+        start_block: U64,
+        end_block: U64,
+    ) -> Result<Vec<Transaction>, Box<dyn std::error::Error>> {
+        let mut transactions = Vec::new();
+        let start: u64 = start_block.as_u64();
+        let end: u64 = end_block.as_u64();
+        for block_number in start..=end {
+            transactions.extend(
+                self.get_address_transactions(address, U64::from(block_number))
+                    .await?,
+            );
+        }
+        Ok(transactions)
+    }
 }

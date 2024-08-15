@@ -23,21 +23,23 @@ impl LiFiBridge {
         Ok(json.chains)
     }
 
-    pub async fn get_known_tokens(&self, chain: &str) -> Result<Vec<Token>, Box<dyn Error>> {
-        let url = format!("{}/tokens?chain={}", LIFI_API_URL, chain);
+    pub async fn get_known_tokens(&self, chain: &str) -> Result<Vec<LifiToken>, Box<dyn Error>> {
+        let url = format!("{}/tokens?chains={}", LIFI_API_URL, chain);
+        println!("URL: {}", url);
         let response = self.client.get(&url).send().await?;
-        let tokens: Vec<Token> = response.json().await?;
-        Ok(tokens)
+        println!("Response: {:?}", response);
+        let json: LifiTokenListResponse = response.json().await?;
+        Ok(json.tokens.get(chain).unwrap_or(&vec![]).to_vec())
     }
 
     pub async fn request_routes(
         &self,
         request: RouteRequest,
-    ) -> Result<Vec<Route>, Box<dyn Error>> {
+    ) -> Result<Vec<LifiRoute>, Box<dyn Error>> {
         let url = format!("{}/advanced/routes", LIFI_API_URL);
         let response = self.client.post(&url).json(&request).send().await?;
-        let routes: Vec<Route> = response.json().await?;
-        Ok(routes)
+        let json: LifiRouteResponse = response.json().await?;
+        Ok(json.routes)
     }
 
     pub async fn request_quote(&self, request: QuoteRequest) -> Result<Quote, Box<dyn Error>> {
@@ -72,10 +74,10 @@ impl LiFiBridge {
     pub async fn get_connections(
         &self,
         request: ConnectionsRequest,
-    ) -> Result<Vec<Connection>, Box<dyn Error>> {
+    ) -> Result<Vec<LifiConnection>, Box<dyn Error>> {
         let url = format!("{}/connections", LIFI_API_URL);
         let response = self.client.get(&url).query(&request).send().await?;
-        let connections: Vec<Connection> = response.json().await?;
-        Ok(connections)
+        let json: LifiConnectionResponse = response.json().await?;
+        Ok(json.connections)
     }
 }

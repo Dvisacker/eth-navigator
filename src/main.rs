@@ -7,10 +7,15 @@ mod evm_interface;
 mod signer_middleware;
 mod ui;
 mod utils;
-
+mod whitelist;
+use crate::config::{
+    get_chain_config, get_chain_from_string, get_chain_id_from_string, get_whitelist_path,
+};
+use crate::utils::{print_lifi_chains, print_lifi_connections, print_lifi_tokens, print_routes};
 use clap::{Args, Parser, Subcommand};
 use dotenv::dotenv;
 use evm_interface::EVMInterface;
+use whitelist::Whitelist;
 
 #[derive(Parser)]
 struct Cli {
@@ -41,6 +46,12 @@ enum Command {
     RequestQuote(RequestQuoteArgs),
     GetTransferStatus(GetTransferStatusArgs),
     GetConnections(GetConnectionsArgs),
+    GetTransactions(GetTransactionsArgs),
+    AddWalletToWhitelist(AddWalletToWhitelistArgs),
+    RemoveWalletFromWhitelist(RemoveWalletFromWhitelistArgs),
+    AddTokenToWhitelist(AddTokenToWhitelistArgs),
+    RemoveTokenFromWhitelist(RemoveTokenFromWhitelistArgs),
+    ShowWhitelist,
 }
 
 #[derive(Args)]
@@ -165,10 +176,6 @@ struct RequestRoutesArgs {
     to_token_address: String,
     #[clap(long)]
     from_amount: String,
-    #[clap(long)]
-    from_address: String,
-    #[clap(long)]
-    to_address: String,
 }
 
 #[derive(Args)]
@@ -217,8 +224,51 @@ struct GetConnectionsArgs {
     allow_exchanges: Option<bool>,
 }
 
-use crate::bridge::lifi_types::LifiChain;
-use crate::utils::print_lifi_chains;
+#[derive(Args)]
+struct GetTransactionsArgs {
+    #[clap(long)]
+    address: String,
+    #[clap(long, default_value = "ethereum")]
+    network: String,
+    #[clap(long)]
+    blocks: Option<u64>,
+}
+
+#[derive(Args)]
+struct AddWalletToWhitelistArgs {
+    #[clap(long)]
+    address: String,
+    #[clap(long)]
+    name: Option<String>,
+}
+
+#[derive(Args)]
+struct RemoveWalletFromWhitelistArgs {
+    #[clap(long)]
+    address: String,
+    #[clap(long)]
+    name: Option<String>,
+}
+
+#[derive(Args)]
+struct AddTokenToWhitelistArgs {
+    #[clap(long)]
+    address: String,
+    #[clap(long)]
+    name: Option<String>,
+    #[clap(long)]
+    chain: String,
+}
+
+#[derive(Args)]
+struct RemoveTokenFromWhitelistArgs {
+    #[clap(long)]
+    address: String,
+    #[clap(long)]
+    name: Option<String>,
+    #[clap(long)]
+    chain: String,
+}
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -306,7 +356,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::GetKnownTokens(args) => {
             let bridge = bridge::lifi::LiFiBridge::new();
             let tokens = bridge.get_known_tokens(&args.chain).await?;
-            println!("Known tokens on {}: {:?}", args.chain, tokens);
+            print_lifi_tokens(&tokens);
+            // println!("Known tokens on {}: {:?}", args.chain, tokens);
         }
         Command::RequestRoutes(args) => {
             let bridge = bridge::lifi::LiFiBridge::new();
@@ -316,11 +367,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 args.from_token_address,
                 args.to_token_address,
                 args.from_amount,
-                args.from_address,
-                args.to_address,
+                // args.from_address,
+                // args.to_address,
             );
             let routes = bridge.request_routes(request).await?;
-            println!("Available routes: {:?}", routes);
+            print_routes(&routes);
         }
         Command::RequestQuote(args) => {
             let bridge = bridge::lifi::LiFiBridge::new();
@@ -358,7 +409,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 args.allow_exchanges,
             );
             let connections = bridge.get_connections(request).await?;
-            println!("Available connections: {:?}", connections);
+            print_lifi_connections(&connections);
+        }
+        Command::GetTransactions(args) => {
+            let evm_interface = EVMInterface::new(&args.network).await?;
+            evm_interface.get_transactions(args.address).await?;
+        }
+        Command::AddWalletToWhitelist(args) => {
+            let mut whitelist = load_or_create_whitelist()?;
+            whitelist.add_wallet_address(args.address, args.name);
+            whitelist.save(&get_whitelist_path().to_string_lossy())?;
+            println!("Wallet address added to whitelist.");
+        }
+        Command::RemoveWalletFromWhitelist(args) => {
+            let mut whitelist = load_or_create_whitelist()?;
+            whitelist.remove_wallet_address(&args.address);
+            whitelist.save(&get_whitelist_path().to_string_lossy())?;
+            println!("Wallet address removed from whitelist.");
+        }
+        Command::AddTokenToWhitelist(args) => {
+            let mut whitelist = load_or_create_whitelist()?;
+            let chain = get_chain_from_string(&args.chain).unwrap();
+            let config = get_chain_config(chain).await;
+            whitelist.add_token_address(args.address, config.chain_id, args.name, config.http);
+            whitelist.save(&get_whitelist_path().to_string_lossy())?;
+            println!("Token address added to whitelist.");
+        }
+        Command::RemoveTokenFromWhitelist(args) => {
+            let mut whitelist = load_or_create_whitelist()?;
+            let chain_id = get_chain_id_from_string(&args.chain).unwrap();
+            whitelist.remove_token_address(&args.address, chain_id);
+            whitelist.save(&get_whitelist_path().to_string_lossy())?;
+            println!("Token address removed from whitelist.");
+        }
+        Command::ShowWhitelist => {
+            let whitelist = load_or_create_whitelist()?;
+            println!("Whitelisted wallet addresses:");
+            for (address, info) in whitelist.get_wallet_addresses() {
+                println!(
+                    "{} ({})",
+                    address,
+                    info.name.as_ref().unwrap_or(&String::new())
+                );
+            }
+            println!("\nWhitelisted token addresses:");
+            for (address, info) in whitelist.get_token_addresses() {
+                println!("{}: {} on {}", info.symbol, address, info.chain_id);
+            }
         }
         _ => {
             println!("Unsupported command");
@@ -366,4 +463,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     Ok(())
+}
+
+fn load_or_create_whitelist() -> Result<Whitelist, Box<dyn std::error::Error>> {
+    let path = get_whitelist_path();
+    if path.exists() {
+        Ok(Whitelist::load(&path.to_string_lossy())?)
+    } else {
+        Ok(Whitelist::new())
+    }
 }

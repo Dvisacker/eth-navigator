@@ -1,9 +1,23 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LifiAPIChainResponse {
     pub chains: Vec<LifiChain>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LifiTokenListResponse {
+    pub tokens: HashMap<String, Vec<LifiToken>>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LifiConnectionResponse {
+    pub connections: Vec<LifiConnection>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -20,7 +34,7 @@ pub struct LifiChain {
     pub multicall_address: String,        // renamed from multicallAddress
     pub faucet_urls: Option<Vec<String>>, // added for optional faucet URLs
     pub metamask: Metamask,               // new struct for metamask details
-    pub native_token: Token,              // new struct for native token details
+    pub native_token: LifiToken,          // new struct for native token details
 }
 
 // New struct for Metamask details
@@ -43,17 +57,17 @@ pub struct NativeCurrency {
     decimals: u8,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct Token {
-    chain_id: u64,
-    address: String,
-    symbol: String,
-    name: String,
-    decimals: u8,
-    price_USD: String,
-    coin_key: String,
-    logo_URI: Option<String>,
+pub struct LifiToken {
+    pub chain_id: u64,
+    pub address: String,
+    pub symbol: String,
+    pub name: String,
+    pub decimals: u8,
+    pub price_USD: String,
+    pub coin_key: Option<String>,
+    pub logo_URI: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -64,8 +78,8 @@ pub struct RouteRequest {
     from_token_address: String,
     to_token_address: String,
     from_amount: String,
-    from_address: String,
-    to_address: String,
+    // from_address: String,
+    // to_address: String,
 }
 
 impl RouteRequest {
@@ -75,8 +89,8 @@ impl RouteRequest {
         from_token_address: String,
         to_token_address: String,
         from_amount: String,
-        from_address: String,
-        to_address: String,
+        // from_address: String,
+        // to_address: String,
     ) -> Self {
         Self {
             from_chain_id,
@@ -84,33 +98,33 @@ impl RouteRequest {
             from_token_address,
             to_token_address,
             from_amount,
-            from_address,
-            to_address,
+            // from_address,
+            // to_address,
         }
     }
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct RouteResponse {
-    pub routes: Vec<Route>,
+pub struct LifiRouteResponse {
+    pub routes: Vec<LifiRoute>,
     pub errors: Option<Vec<RouteError>>,
 }
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct Route {
+pub struct LifiRoute {
     pub id: String,
     pub from_chain_id: u64,
-    pub from_amount_usd: String,
+    pub from_amount_usd: Option<String>,
     pub from_amount: String,
-    pub from_token: Token,
+    pub from_token: LifiToken,
     pub to_chain_id: u64,
-    pub to_amount_usd: String,
+    pub to_amount_usd: Option<String>,
     pub to_amount: String,
     pub to_amount_min: String,
-    pub to_token: Token,
-    pub gas_cost_usd: String,
+    pub to_token: LifiToken,
+    pub gas_cost_usd: Option<String>,
     pub steps: Vec<Step>,
 }
 
@@ -131,8 +145,8 @@ pub struct Step {
 pub struct Action {
     pub from_chain_id: u64,
     pub to_chain_id: u64,
-    pub from_token: Token,
-    pub to_token: Token,
+    pub from_token: LifiToken,
+    pub to_token: LifiToken,
     pub from_amount: String,
     pub slippage: f64,
 }
@@ -146,7 +160,7 @@ pub struct Estimate {
     pub approval_address: String,
     pub fee_costs: Vec<FeeCost>,
     pub gas_costs: Vec<GasCost>,
-    pub data: serde_json::Value,
+    pub data: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -155,10 +169,10 @@ pub struct FeeCost {
     pub name: String,
     pub description: String,
     pub percentage: String,
-    pub token: Token,
+    pub token: LifiToken,
     pub amount: String,
-    pub amount_usd: String,
-    pub included: bool,
+    pub amount_usd: Option<String>,
+    pub included: Option<bool>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -170,8 +184,8 @@ pub struct GasCost {
     pub estimate: String,
     pub limit: String,
     pub amount: String,
-    pub amount_usd: String,
-    pub token: Token,
+    pub amount_usd: Option<String>,
+    pub token: LifiToken,
 }
 
 #[derive(Debug, Deserialize)]
@@ -286,14 +300,11 @@ impl ConnectionsRequest {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Connection {
-    #[serde(rename = "fromChainId")]
-    from_chain_id: u64,
-    #[serde(rename = "toChainId")]
-    to_chain_id: u64,
-    #[serde(rename = "fromTokens")]
-    from_tokens: Vec<Token>,
-    #[serde(rename = "toTokens")]
-    to_tokens: Vec<Token>,
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct LifiConnection {
+    pub from_chain_id: u64,
+    pub to_chain_id: u64,
+    pub from_tokens: Vec<LifiToken>,
+    pub to_tokens: Vec<LifiToken>,
 }

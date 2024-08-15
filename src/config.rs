@@ -6,7 +6,7 @@ use ethers::{
     types::Chain,
 };
 use once_cell::sync::Lazy;
-use std::{collections::HashMap, env, sync::Arc};
+use std::{collections::HashMap, env, path::PathBuf, sync::Arc};
 
 use crate::signer_middleware::setup_signer;
 
@@ -34,6 +34,12 @@ pub static CHAIN_MAP: Lazy<HashMap<String, Chain>> = Lazy::new(|| {
     m.insert("optimism_goerli".to_string(), Chain::OptimismGoerli);
     m
 });
+
+pub const DEFAULT_WHITELIST_PATH: &str = "whitelist.json";
+
+pub fn get_whitelist_path() -> PathBuf {
+    PathBuf::from(DEFAULT_WHITELIST_PATH)
+}
 
 pub async fn get_chain_config(chain: Chain) -> ChainConfig {
     match chain {
@@ -93,4 +99,12 @@ pub async fn get_chain_config(chain: Chain) -> ChainConfig {
 pub fn get_chain_from_string(chain_name: &str) -> Option<Chain> {
     println!("Chain name: {}", chain_name);
     CHAIN_MAP.get(chain_name).cloned()
+}
+
+pub fn get_chain_id_from_string(chain_name: &str) -> Option<u64> {
+    let chain = get_chain_from_string(chain_name);
+    match chain {
+        Some(chain) => Some(chain as u64),
+        None => None,
+    }
 }

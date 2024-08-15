@@ -1,6 +1,6 @@
 # Kleptoman - Ethereum Blockchain Interaction Tool
 
-Kleptoman is a command-line tool for interacting with Ethereum and Ethereum-compatible blockchains. It provides various functionalities such as querying blockchain data, subscribing to events, generating contract bindings, and interacting with the LI.FI bridge.
+Kleptoman is a command-line tool for interacting with Ethereum and Ethereum-compatible blockchains. It provides various functionalities such as querying blockchain data, subscribing to events, generating contract bindings, interacting with the LI.FI bridge, and managing whitelists.
 
 ## Installation
 
@@ -97,46 +97,97 @@ cargo run -- send-eth --to-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --
 cargo run -- send-erc20 --token-address 0x6B175474E89094C44Da98b954EedeAC495271d0F --to-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --amount 1000000000000000000 --network ethereum
 ```
 
+16. Get Transactions
+```
+cargo run -- get-transactions --address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --network ethereum
+```
+
 ### LI.FI Bridge Commands
 
-16. Get Supported Chains
+17. Get Supported Chains
 ```
 cargo run -- get-supported-chains
 ```
 
-17. Get Known Tokens
+18. Get Known Tokens
 ```
 cargo run -- get-known-tokens --chain ethereum
 ```
 
-18. Request Routes
+19. Request Routes
 ```
-cargo run -- request-routes --from-chain-id 1 --to-chain-id 137 --from-token-address 0x6B175474E89094C44Da98b954EedeAC495271d0F --to-token-address 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 --from-amount 1000000000000000000 --from-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --to-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+cargo run -- request-routes --from-chain-id 1 --to-chain-id 137 --from-token-address 0x6B175474E89094C44Da98b954EedeAC495271d0F --to-token-address 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 --from-amount 1000000000000000000
 ```
 
-19. Request Quote
+20. Request Quote
 ```
 cargo run -- request-quote --from-chain ethereum --to-chain polygon --from-token DAI --to-token DAI --from-amount 1000000000000000000 --from-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --to-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
 ```
 
-20. Get Transfer Status
+21. Get Transfer Status
 ```
 cargo run -- get-transfer-status --tx-hash 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef --from-chain ethereum --to-chain polygon
 ```
 
-21. Get Connections
-
-Retrieves and filters possible connections between chains and tokens from the LI.FI API.
-
+22. Get Connections
 ```
-cargo run -- get-connections [--from-chain <FROM_CHAIN>] [--to-chain <TO_CHAIN>] [--from-token <FROM_TOKEN>] [--to-token <TO_TOKEN>] [--from-amount <FROM_AMOUNT>] [--allow-exchanges <ALLOW_EXCHANGES>]
+cargo run -- get-connections --from-chain ethereum --to-chain polygon --from-token DAI --to-token MATIC --from-amount 1000000000000000000 --allow-exchanges true
 ```
+
+### Whitelist Management Commands
+
+23. Add Wallet to Whitelist
+```
+cargo run -- add-wallet-to-whitelist --address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --name "My Wallet"
+```
+
+24. Remove Wallet from Whitelist
+```
+cargo run -- remove-wallet-from-whitelist --address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
+```
+
+25. Add Token to Whitelist
+```
+cargo run -- add-token-to-whitelist --address 0x6B175474E89094C44Da98b954EedeAC495271d0F --name "DAI" --chain ethereum
+```
+
+26. Remove Token from Whitelist
+```
+cargo run -- remove-token-from-whitelist --address 0x6B175474E89094C44Da98b954EedeAC495271d0F --chain ethereum
+```
+
+27. Show Whitelist
+```
+cargo run -- show-whitelist
+```
+
+## Roadmap
+
+- [x] Basic EVM interactions (get balance, send transactions, etc.)
+- [x] Contract interaction (ERC20, WETH)
+- [x] Block and transaction monitoring
+- [x] Contract binding generation
+- [x] LI.FI integration for cross-chain operations
+- [x] Whitelist management for wallets and tokens
+- [ ] Supply assets on Aave
+- [ ] Swap tokens on Uniswap
+- [ ] Get a flash loan
+- [ ] Set a limit order on CoWSwap
+- [ ] Integrate Pendle functionality
+- [ ] Bridge assets with LI.FI or Jumper
+- [ ] Implement Executor functionality for automated operations
+- [ ] Improve error handling and user feedback
+- [ ] Add comprehensive testing suite
+- [ ] Create user-friendly documentation
+
+This roadmap is subject to change as the project evolves. Contributions and suggestions for new features are always welcome!
 
 ## Notes
 
 - Replace placeholder addresses, transaction hashes, and other values with actual data when using these commands.
 - Some commands may require additional setup, such as setting environment variables for API keys or wallet private keys.
 - The `--network` option defaults to "ethereum" for most commands if not specified.
+- The whitelist is stored in a file named `whitelist.json` in the project root directory.
 
 ## Contributing
 

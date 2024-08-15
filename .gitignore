@@ -2,3 +2,4 @@
 
 # Dotenv file
 .env
+whitelist.json
