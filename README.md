@@ -164,21 +164,22 @@ cargo run -- show-whitelist
 ## Roadmap
 
 - [x] Basic EVM interactions (get balance, send transactions, etc.)
-- [x] Contract interaction (ERC20, WETH)
+- [x] ERC20 Send Tokens
+- [x] ERC20 Get Balance
 - [x] Block and transaction monitoring
 - [x] Contract binding generation
-- [x] LI.FI integration for cross-chain operations
 - [x] Whitelist management for wallets and tokens
-- [ ] Supply assets on Aave
-- [ ] Swap tokens on Uniswap
-- [ ] Get a flash loan
-- [ ] Set a limit order on CoWSwap
-- [ ] Integrate Pendle functionality
-- [ ] Bridge assets with LI.FI or Jumper
-- [ ] Implement Executor functionality for automated operations
-- [ ] Improve error handling and user feedback
-- [ ] Add comprehensive testing suite
-- [ ] Create user-friendly documentation
+- [ ] Aave Supply/Borrow
+- [ ] Uniswap Swap
+- [ ] Uniswap Provide Liquidity
+- [ ] Lifi integration
+- [ ] Aave Flash Loan
+- [ ] CoWSwap Limit Order
+- [ ] Improve error handling
+- [ ] Interactive confirmation when sending transaction
+- [ ] Ledger support
+- [ ] Debug tranasction list
+- [ ] Add tests
 
 This roadmap is subject to change as the project evolves. Contributions and suggestions for new features are always welcome!
 

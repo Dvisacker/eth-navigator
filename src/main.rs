@@ -431,7 +431,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let mut whitelist = load_or_create_whitelist()?;
             let chain = get_chain_from_string(&args.chain).unwrap();
             let config = get_chain_config(chain).await;
-            whitelist.add_token_address(args.address, config.chain_id, args.name, config.http);
+            whitelist
+                .add_token_address(args.address, config.chain_id, args.name, config.http)
+                .await?;
             whitelist.save(&get_whitelist_path().to_string_lossy())?;
             println!("Token address added to whitelist.");
         }
