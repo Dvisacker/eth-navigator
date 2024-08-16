@@ -1,4 +1,4 @@
-use ethers::abi::Abi;
+use ethers::abi::{Abi, Token};
 use ethers::prelude::*;
 use ethers::types::{Address, Filter, H256, U64};
 use openzeppelin_rs::ERC20;
@@ -7,18 +7,24 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 
+use crate::bindings::uniswap_v3_router::{ExactInputParams, UNISWAP_V3_ROUTER};
 use crate::bindings::weth::WETH;
 use crate::config::{get_chain_config, get_chain_from_string, ChainConfig};
+use crate::whitelist::Whitelist;
 use crate::{addressbook, utils};
 
 pub struct EVMInterface {
     config: Arc<ChainConfig>,
     explorer_client: Arc<Client>,
     network: String,
+    whitelist: Arc<Whitelist>,
 }
 
 impl EVMInterface {
-    pub async fn new(network: &str) -> Result<Self, Box<dyn std::error::Error>> {
+    pub async fn new(
+        network: &str,
+        whitelist: Arc<Whitelist>,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let chain = get_chain_from_string(network)
             .ok_or_else(|| format!("Unsupported network: {}", network))?;
         let config = get_chain_config(chain).await;
@@ -28,6 +34,7 @@ impl EVMInterface {
             config: Arc::new(config),
             network: network.to_string(),
             explorer_client: Arc::new(explorer_client),
+            whitelist,
         })
     }
 
@@ -270,6 +277,14 @@ impl EVMInterface {
         amount: u64,
     ) -> Result<(), Box<dyn std::error::Error>> {
         let to_address = Address::from_str(&to_address)?;
+
+        if !self
+            .whitelist
+            .is_wallet_whitelisted(&to_address.to_string())
+        {
+            return Err("Recipient address is not whitelisted".into());
+        }
+
         let amount = U256::from(amount);
 
         let tx = TransactionRequest::new()
@@ -294,6 +309,21 @@ impl EVMInterface {
     ) -> Result<(), Box<dyn std::error::Error>> {
         let token_address = Address::from_str(&token_address)?;
         let to_address = Address::from_str(&to_address)?;
+
+        if !self
+            .whitelist
+            .is_token_whitelisted(&token_address.to_string(), self.config.chain_id)
+        {
+            return Err("Token address is not whitelisted".into());
+        }
+
+        if !self
+            .whitelist
+            .is_wallet_whitelisted(&to_address.to_string())
+        {
+            return Err("Recipient address is not whitelisted".into());
+        }
+
         let amount = U256::from(amount);
 
         let token = ERC20::new(token_address, self.config.http.clone());
@@ -424,5 +454,90 @@ impl EVMInterface {
             );
         }
         Ok(transactions)
+    }
+
+    pub async fn swap_tokens_uniswap_v3(
+        &self,
+        token_in: String,
+        token_out: String,
+        amount_in: String,
+        amount_out_minimum: String,
+        recipient: String,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let token_in = Address::from_str(&token_in)?;
+        let token_out = Address::from_str(&token_out)?;
+        let recipient = Address::from_str(&recipient)?;
+
+        if !self
+            .whitelist
+            .is_token_whitelisted(&token_in.to_string(), self.config.chain_id)
+        {
+            return Err("Input token address is not whitelisted".into());
+        }
+
+        if !self
+            .whitelist
+            .is_token_whitelisted(&token_out.to_string(), self.config.chain_id)
+        {
+            return Err("Output token address is not whitelisted".into());
+        }
+
+        if !self.whitelist.is_wallet_whitelisted(&recipient.to_string()) {
+            return Err("Recipient address is not whitelisted".into());
+        }
+
+        // Create ERC20 instances for token_in and token_out
+        let token_in_contract = ERC20::new(token_in, self.config.http.clone());
+        let token_out_contract = ERC20::new(token_out, self.config.http.clone());
+
+        // Get token decimals
+        let token_in_decimals = token_in_contract.decimals().call().await?;
+        let token_out_decimals = token_out_contract.decimals().call().await?;
+
+        // Parse amounts considering token decimals
+        let amount_in =
+            U256::from_dec_str(&amount_in)? * U256::from(10).pow(U256::from(token_in_decimals));
+        let amount_out_minimum = U256::from_dec_str(&amount_out_minimum)?
+            * U256::from(10).pow(U256::from(token_out_decimals));
+
+        let uniswap_router_address =
+            addressbook::contract_address("uniswap_v3_router", self.config.chain)
+                .ok_or_else(|| format!("Uniswap V3 Router not deployed on {}", self.network))?;
+
+        // Approve token_in for Uniswap router
+        let approve_tx = token_in_contract.approve(uniswap_router_address, amount_in);
+        let pending_approve_tx = approve_tx.send().await?;
+        println!(
+            "Approval transaction sent: {:?}",
+            pending_approve_tx.tx_hash()
+        );
+        let approve_receipt = pending_approve_tx.await?;
+        println!("Approval transaction receipt: {:?}", approve_receipt);
+
+        let uniswap_router =
+            UNISWAP_V3_ROUTER::new(uniswap_router_address, self.config.http.clone());
+
+        let path = ethers::abi::encode(&[
+            Token::Address(token_in),
+            Token::Uint(U256::from(3000)),
+            Token::Address(token_out),
+        ]);
+
+        let params = ExactInputParams(
+            Bytes::from(path),
+            recipient,
+            U256::from(u64::MAX), // Set a reasonable deadline
+            amount_in,
+            amount_out_minimum,
+        );
+
+        let tx = uniswap_router.exact_input(params);
+        let pending_tx = tx.send().await?;
+        println!("Swap transaction sent: {:?}", pending_tx.tx_hash());
+
+        let receipt = pending_tx.await?;
+        println!("Swap transaction receipt: {:?}", receipt);
+
+        Ok(())
     }
 }

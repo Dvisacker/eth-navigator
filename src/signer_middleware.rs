@@ -1,3 +1,4 @@
+use crate::load_or_create_whitelist;
 use ethers::{
     core::k256::ecdsa::SigningKey,
     middleware::SignerMiddleware,
@@ -8,6 +9,7 @@ use ethers::{
 pub async fn setup_signer(
     provider: Provider<Http>,
 ) -> SignerMiddleware<Provider<Http>, Wallet<SigningKey>> {
+    let whitelist = load_or_create_whitelist().expect("Failed to load or create whitelist");
     let chain_id = provider
         .get_chainid()
         .await
@@ -20,5 +22,10 @@ pub async fn setup_signer(
         .expect("Failed to parse wallet")
         .with_chain_id(chain_id.as_u64());
 
-    SignerMiddleware::new(provider, wallet)
+    if !whitelist.is_wallet_whitelisted(&wallet.address().to_string()) {
+        panic!("Wallet is not whitelisted");
+    }
+
+    let signer = SignerMiddleware::new(provider, wallet);
+    return signer;
 }

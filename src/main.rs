@@ -12,10 +12,11 @@ use crate::config::{
     get_chain_config, get_chain_from_string, get_chain_id_from_string, get_whitelist_path,
 };
 use crate::utils::{print_lifi_chains, print_lifi_connections, print_lifi_tokens, print_routes};
+use crate::whitelist::Whitelist;
 use clap::{Args, Parser, Subcommand};
 use dotenv::dotenv;
 use evm_interface::EVMInterface;
-use whitelist::Whitelist;
+use std::sync::Arc;
 
 #[derive(Parser)]
 struct Cli {
@@ -52,6 +53,7 @@ enum Command {
     AddTokenToWhitelist(AddTokenToWhitelistArgs),
     RemoveTokenFromWhitelist(RemoveTokenFromWhitelistArgs),
     ShowWhitelist,
+    SwapTokensUniswapV3(SwapTokensUniswapV3Args),
 }
 
 #[derive(Args)]
@@ -270,50 +272,68 @@ struct RemoveTokenFromWhitelistArgs {
     chain: String,
 }
 
+#[derive(Args)]
+struct SwapTokensUniswapV3Args {
+    #[clap(long)]
+    token_in: String,
+    #[clap(long)]
+    token_out: String,
+    #[clap(long)]
+    amount_in: String,
+    #[clap(long)]
+    amount_out_minimum: String,
+    #[clap(long)]
+    recipient: String,
+    #[clap(long, default_value = "ethereum")]
+    network: String,
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenv().ok();
     let cli = Cli::parse();
 
+    let whitelist = Arc::new(load_or_create_whitelist()?);
+
     match cli.command {
         Command::GetBlockNumber(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_block_number().await?;
         }
         Command::SubscribeBlocks(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.subscribe_blocks().await?;
         }
         Command::SubscribePendingTransactions(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.subscribe_pending_transactions().await?;
         }
         Command::GetGasPrice(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_gas_price().await?;
         }
         Command::GetBalance(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_balance(args.address).await?;
         }
         Command::GetNonce(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_nonce(args.address).await?;
         }
         Command::GetBlockDetails(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_block_details(args.block_number).await?;
         }
         Command::SubscribeLogs(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.subscribe_logs().await?;
         }
         Command::GetTxDetails(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_tx_details(args.tx_hash).await?;
         }
         Command::GenerateContractBindings(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             println!(
                 "Generating contract bindings for {} on {}",
                 args.contract_address, args.network
@@ -323,27 +343,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .await?;
         }
         Command::GenerateSourceCode(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface
                 .generate_source_code(args.contract_address, args.contract_name)
                 .await?;
         }
         Command::GetERC20Balance(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface
                 .get_erc_20_balances(args.wallet_address, args.token_address)
                 .await?;
         }
         Command::WrapETH(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.wrap_eth(args.amount).await?;
         }
         Command::SendETH(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist.clone()).await?;
             evm_interface.send_eth(args.to_address, args.amount).await?;
         }
         Command::SendERC20(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist.clone()).await?;
             evm_interface
                 .send_erc20(args.token_address, args.to_address, args.amount)
                 .await?;
@@ -412,7 +432,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             print_lifi_connections(&connections);
         }
         Command::GetTransactions(args) => {
-            let evm_interface = EVMInterface::new(&args.network).await?;
+            let evm_interface = EVMInterface::new(&args.network, whitelist).await?;
             evm_interface.get_transactions(args.address).await?;
         }
         Command::AddWalletToWhitelist(args) => {
@@ -458,6 +478,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             for (address, info) in whitelist.get_token_addresses() {
                 println!("{}: {} on {}", info.symbol, address, info.chain_id);
             }
+        }
+        Command::SwapTokensUniswapV3(args) => {
+            let evm_interface = EVMInterface::new(&args.network, whitelist.clone()).await?;
+            evm_interface
+                .swap_tokens_uniswap_v3(
+                    args.token_in,
+                    args.token_out,
+                    args.amount_in,
+                    args.amount_out_minimum,
+                    args.recipient,
+                )
+                .await?;
         }
         _ => {
             println!("Unsupported command");

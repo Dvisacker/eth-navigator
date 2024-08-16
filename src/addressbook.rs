@@ -27,5 +27,3 @@ impl Contract {
 pub fn contract_address<S: Into<String>>(name: S, chain: Chain) -> Option<Address> {
     ADDRESSBOOK.get(&name.into()).and_then(|c| c.address(chain))
 }
-
-// tests

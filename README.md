@@ -102,61 +102,66 @@ cargo run -- send-erc20 --token-address 0x6B175474E89094C44Da98b954EedeAC495271d
 cargo run -- get-transactions --address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --network ethereum
 ```
 
+17. Swap Tokens on Uniswap V3
+```
+cargo run -- swap-tokens-uniswap-v3 --token-in 0x6B175474E89094C44Da98b954EedeAC495271d0F --token-out 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 --amount-in 1000000000000000000 --amount-out-minimum 1000000000000000000 --recipient 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --network ethereum
+```
+
 ### LI.FI Bridge Commands
 
-17. Get Supported Chains
+18. Get Supported Chains
 ```
 cargo run -- get-supported-chains
 ```
 
-18. Get Known Tokens
+19. Get Known Tokens
 ```
 cargo run -- get-known-tokens --chain ethereum
 ```
 
-19. Request Routes
+20. Request Routes
 ```
 cargo run -- request-routes --from-chain-id 1 --to-chain-id 137 --from-token-address 0x6B175474E89094C44Da98b954EedeAC495271d0F --to-token-address 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 --from-amount 1000000000000000000
 ```
 
-20. Request Quote
+21. Request Quote
 ```
 cargo run -- request-quote --from-chain ethereum --to-chain polygon --from-token DAI --to-token DAI --from-amount 1000000000000000000 --from-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --to-address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
 ```
 
-21. Get Transfer Status
+22. Get Transfer Status
 ```
 cargo run -- get-transfer-status --tx-hash 0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef --from-chain ethereum --to-chain polygon
 ```
 
-22. Get Connections
+23. Get Connections
 ```
 cargo run -- get-connections --from-chain ethereum --to-chain polygon --from-token DAI --to-token MATIC --from-amount 1000000000000000000 --allow-exchanges true
 ```
 
 ### Whitelist Management Commands
 
-23. Add Wallet to Whitelist
+24. Add Wallet to Whitelist
 ```
 cargo run -- add-wallet-to-whitelist --address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e --name "My Wallet"
 ```
 
-24. Remove Wallet from Whitelist
+25. Remove Wallet from Whitelist
 ```
 cargo run -- remove-wallet-from-whitelist --address 0x742d35Cc6634C0532925a3b844Bc454e4438f44e
 ```
 
-25. Add Token to Whitelist
+26. Add Token to Whitelist
 ```
 cargo run -- add-token-to-whitelist --address 0x6B175474E89094C44Da98b954EedeAC495271d0F --name "DAI" --chain ethereum
 ```
 
-26. Remove Token from Whitelist
+27. Remove Token from Whitelist
 ```
 cargo run -- remove-token-from-whitelist --address 0x6B175474E89094C44Da98b954EedeAC495271d0F --chain ethereum
 ```
 
-27. Show Whitelist
+28. Show Whitelist
 ```
 cargo run -- show-whitelist
 ```
