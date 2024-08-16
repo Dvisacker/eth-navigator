@@ -1,6 +1,6 @@
-# Kleptoman - Ethereum Blockchain Interaction Tool
+# eth-manager - EVM Chain Manager Tool
 
-Kleptoman is a command-line tool for interacting with Ethereum and Ethereum-compatible blockchains. It provides various functionalities such as querying blockchain data, subscribing to events, generating contract bindings, interacting with the LI.FI bridge, and managing whitelists.
+eth-manager is a command-line tool for interacting with Ethereum and Ethereum-compatible blockchains. It provides various functionalities such as querying blockchain data, subscribing to events sending/bridging assets, generating contract bindings, abi or source code. To avoid errors, tokens and wallets must be whitelisted. 
 
 ## Installation
 
@@ -10,7 +10,7 @@ Kleptoman is a command-line tool for interacting with Ethereum and Ethereum-comp
 
 ## Usage
 
-To use Kleptoman, run the following command:
+To use eth-manager, run the following command:
 
 ```
 cargo run -- <COMMAND> [OPTIONS]
