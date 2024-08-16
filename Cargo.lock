@@ -889,6 +889,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "eth-manager"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "clap",
+ "crossterm 0.28.1",
+ "dotenv",
+ "ethers",
+ "eyre",
+ "once_cell",
+ "openzeppelin-rs",
+ "prettytable-rs",
+ "reqwest 0.12.5",
+ "serde",
+ "serde_json",
+ "tokio",
+ "tui",
+]
+
+[[package]]
 name = "ethabi"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1901,26 +1921,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ecc2af9a1119c51f12a14607e783cb977bde58bc069ff0c3da1095e635d70654"
 dependencies = [
  "cpufeatures",
-]
-
-[[package]]
-name = "kleptoman"
-version = "0.1.0"
-dependencies = [
- "async-trait",
- "clap",
- "crossterm 0.28.1",
- "dotenv",
- "ethers",
- "eyre",
- "once_cell",
- "openzeppelin-rs",
- "prettytable-rs",
- "reqwest 0.12.5",
- "serde",
- "serde_json",
- "tokio",
- "tui",
 ]
 
 [[package]]

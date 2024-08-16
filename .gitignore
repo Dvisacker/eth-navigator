@@ -3,3 +3,5 @@
 # Dotenv file
 .env
 whitelist.json
+
+/archives

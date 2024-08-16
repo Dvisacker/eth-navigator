@@ -2,10 +2,8 @@ mod addressbook;
 mod bindings;
 mod bridge;
 mod config;
-mod encoder;
 mod evm_interface;
 mod signer_middleware;
-mod ui;
 mod utils;
 mod whitelist;
 use crate::config::{
