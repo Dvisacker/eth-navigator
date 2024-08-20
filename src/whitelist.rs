@@ -100,6 +100,12 @@ impl Whitelist {
     pub fn get_token_addresses(&self) -> &HashMap<String, TokenInfo> {
         &self.token_addresses
     }
+
+    pub fn get_wallet_by_name(&self, name: &str) -> Option<&WalletInfo> {
+        self.wallet_addresses
+            .values()
+            .find(|info| info.name.as_deref() == Some(name))
+    }
 }
 
 impl Default for Whitelist {

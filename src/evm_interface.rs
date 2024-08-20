@@ -6,7 +6,11 @@ use std::fs;
 use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::bindings::uniswap_v2_factory::UNISWAP_V2_FACTORY;
+use crate::bindings::uniswap_v2_pool::UNISWAP_V2_POOL;
+use crate::bindings::uniswap_v2_router::UNISWAP_V2_ROUTER;
 use crate::bindings::uniswap_v3_router::{ExactInputParams, UNISWAP_V3_ROUTER};
 use crate::bindings::weth::WETH;
 use crate::config::{get_chain_config, get_chain_from_string, ChainConfig};
@@ -537,6 +541,134 @@ impl EVMInterface {
 
         let receipt = pending_tx.await?;
         println!("Swap transaction receipt: {:?}", receipt);
+
+        Ok(())
+    }
+
+    pub async fn add_liquidity_uniswap_v2(
+        &self,
+        token_a: String,
+        token_b: String,
+        amount_a_desired: String,
+        amount_a_min: String,
+        to: String,
+        deadline: u64,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let token_a = Address::from_str(&token_a)?;
+        let token_b = Address::from_str(&token_b)?;
+        let to = Address::from_str(&to)?;
+
+        if !self
+            .whitelist
+            .is_token_whitelisted(&token_a.to_string(), self.config.chain_id)
+        {
+            return Err("Token A address is not whitelisted".into());
+        }
+
+        if !self
+            .whitelist
+            .is_token_whitelisted(&token_b.to_string(), self.config.chain_id)
+        {
+            return Err("Token B address is not whitelisted".into());
+        }
+
+        if !self.whitelist.is_wallet_whitelisted(&to.to_string()) {
+            return Err("Recipient address is not whitelisted".into());
+        }
+
+        let token_a_contract = ERC20::new(token_a, self.config.http.clone());
+        let token_b_contract = ERC20::new(token_b, self.config.http.clone());
+
+        let token_a_decimals = token_a_contract.decimals().call().await?;
+        let token_b_decimals = token_b_contract.decimals().call().await?;
+
+        let amount_a_desired = U256::from_dec_str(&amount_a_desired)?
+            * U256::from(10).pow(U256::from(token_a_decimals));
+        let amount_a_min =
+            U256::from_dec_str(&amount_a_min)? * U256::from(10).pow(U256::from(token_a_decimals));
+
+        let uniswap_factory_address =
+            addressbook::contract_address("uniswap_v2_factory", self.config.chain)
+                .ok_or_else(|| format!("Uniswap V2 Factory not deployed on {}", self.network))?;
+
+        let uniswap_factory =
+            UNISWAP_V2_FACTORY::new(uniswap_factory_address, self.config.http.clone());
+
+        // Get the pair address
+        let pair_address = uniswap_factory.get_pair(token_a, token_b).call().await?;
+
+        if pair_address == Address::zero() {
+            return Err("Liquidity pool does not exist for the given token pair".into());
+        }
+
+        let pair_contract = UNISWAP_V2_POOL::new(pair_address, self.config.http.clone());
+
+        // Get current reserves
+        let (reserve_a, reserve_b, _) = pair_contract.get_reserves().call().await?;
+
+        // Calculate amount_b based on the current price in the pool
+        let amount_b_desired = if reserve_a == 0 || reserve_b == 0 {
+            amount_a_desired // If the pool is empty, use the same amount as token A
+        } else {
+            amount_a_desired * U256::from(reserve_b) / U256::from(reserve_a)
+        };
+
+        let amount_b_min = amount_b_desired * 95 / 100; // Set amount_b_min to 95% of amount_b_desired
+
+        let uniswap_router_address =
+            addressbook::contract_address("uniswap_v2_router", self.config.chain)
+                .ok_or_else(|| format!("Uniswap V2 Router not deployed on {}", self.network))?;
+
+        let uniswap_router =
+            UNISWAP_V2_ROUTER::new(uniswap_router_address, self.config.http.clone());
+
+        // Approve token A
+        let approve_a_tx = token_a_contract.approve(uniswap_router_address, amount_a_desired);
+        let pending_approve_a_tx = approve_a_tx.send().await?;
+        println!(
+            "Approval transaction for token A sent: {:?}",
+            pending_approve_a_tx.tx_hash()
+        );
+        let approve_a_receipt = pending_approve_a_tx.await?;
+        println!(
+            "Approval transaction receipt for token A: {:?}",
+            approve_a_receipt
+        );
+
+        // Approve token B
+        let approve_b_tx = token_b_contract.approve(uniswap_router_address, amount_b_desired);
+        let pending_approve_b_tx = approve_b_tx.send().await?;
+        println!(
+            "Approval transaction for token B sent: {:?}",
+            pending_approve_b_tx.tx_hash()
+        );
+        let approve_b_receipt = pending_approve_b_tx.await?;
+        println!(
+            "Approval transaction receipt for token B: {:?}",
+            approve_b_receipt
+        );
+
+        let deadline = if deadline == 0 {
+            SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs() + 3600 // Default to 1 hour from now
+        } else {
+            deadline
+        };
+
+        let tx = uniswap_router.add_liquidity(
+            token_a,
+            token_b,
+            amount_a_desired,
+            amount_b_desired,
+            amount_a_min,
+            amount_b_min,
+            to,
+            deadline.into(),
+        );
+        let pending_tx = tx.send().await?;
+        println!("Add liquidity transaction sent: {:?}", pending_tx.tx_hash());
+
+        let receipt = pending_tx.await?;
+        println!("Add liquidity transaction receipt: {:?}", receipt);
 
         Ok(())
     }
