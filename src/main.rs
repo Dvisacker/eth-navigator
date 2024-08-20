@@ -3,12 +3,14 @@ mod bindings;
 mod bridge;
 mod config;
 mod evm_interface;
+mod resolver;
 mod signer_middleware;
 mod utils;
 mod whitelist;
 use crate::config::{
     get_chain_config, get_chain_from_string, get_chain_id_from_string, get_whitelist_path,
 };
+use crate::resolver::Resolver;
 use crate::utils::{print_lifi_chains, print_lifi_connections, print_lifi_tokens, print_routes};
 use crate::whitelist::Whitelist;
 use clap::{Args, Parser, Subcommand};
@@ -313,6 +315,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cli = Cli::parse();
 
     let whitelist = Arc::new(load_or_create_whitelist()?);
+    let resolver = Resolver::new(Arc::clone(&whitelist));
 
     match cli.command {
         Command::GetBlockNumber(args) => {
@@ -334,14 +337,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::GetBalance(args) => {
             let evm_interface = EVMInterface::new(&args.network, whitelist.clone()).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let address = resolve_address(&args.address, chain, whitelist)?;
+            let address = resolver.resolve(&args.address, chain)?;
             evm_interface.get_balance(address.to_string()).await?;
         }
         Command::GetNonce(args) => {
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
             let whitelist = Arc::clone(&whitelist);
-            let address = resolve_address(&args.address, chain, whitelist)?;
+            let address = resolver.resolve(&args.address, chain)?;
             evm_interface.get_nonce(address.to_string()).await?;
         }
         Command::GetBlockDetails(args) => {
@@ -360,7 +363,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::GenerateContractBindings(args) => {
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let contract_address = resolve_address(&args.contract_address, chain, whitelist)?;
+            let contract_address = resolver.resolve(&args.contract_address, chain)?;
             println!(
                 "Generating contract bindings for {} on {}",
                 contract_address, args.network
@@ -372,7 +375,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::GenerateSourceCode(args) => {
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let contract_address = resolve_address(&args.contract_address, chain, whitelist)?;
+            let contract_address = resolver.resolve(&args.contract_address, chain)?;
             evm_interface
                 .generate_source_code(contract_address.to_string(), args.contract_name)
                 .await?;
@@ -380,10 +383,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::GetERC20Balance(args) => {
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let wallet_address =
-                resolve_address(&args.wallet_address, chain, Arc::clone(&whitelist))?;
-            let token_address =
-                resolve_address(&args.token_address, chain, Arc::clone(&whitelist))?;
+            let wallet_address = resolver.resolve(&args.wallet_address, chain)?;
+            let token_address = resolver.resolve(&args.token_address, chain)?;
             evm_interface
                 .get_erc_20_balances(wallet_address.to_string(), token_address.to_string())
                 .await?;
@@ -395,7 +396,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::SendETH(args) => {
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let to_address = resolve_address(&args.to_address, chain, Arc::clone(&whitelist))?;
+            let to_address = resolver.resolve(&args.to_address, chain)?;
             evm_interface
                 .send_eth(to_address.to_string(), args.amount)
                 .await?;
@@ -403,9 +404,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::SendERC20(args) => {
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let token_address =
-                resolve_address(&args.token_address, chain, Arc::clone(&whitelist))?;
-            let to_address = resolve_address(&args.to_address, chain, Arc::clone(&whitelist))?;
+            let token_address = resolver.resolve(&args.token_address, chain)?;
+            let to_address = resolver.resolve(&args.to_address, chain)?;
             evm_interface
                 .send_erc20(
                     token_address.to_string(),
@@ -429,10 +429,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let bridge = bridge::lifi::LiFiBridge::new();
             let from_chain = get_chain_from_string(&args.from_chain_id.to_string()).unwrap();
             let to_chain = get_chain_from_string(&args.to_chain_id.to_string()).unwrap();
-            let from_token_address =
-                resolve_address(&args.from_token_address, from_chain, Arc::clone(&whitelist))?;
-            let to_token_address =
-                resolve_address(&args.to_token_address, to_chain, Arc::clone(&whitelist))?;
+            let from_token_address = resolver.resolve(&args.from_token_address, from_chain)?;
+            let to_token_address = resolver.resolve(&args.to_token_address, to_chain)?;
             let request = bridge::lifi_types::RouteRequest::new(
                 args.from_chain_id,
                 args.to_chain_id,
@@ -449,11 +447,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let bridge = bridge::lifi::LiFiBridge::new();
             let from_chain = get_chain_from_string(&args.from_chain).unwrap();
             let to_chain = get_chain_from_string(&args.to_chain).unwrap();
-            let from_token = resolve_address(&args.from_token, from_chain, Arc::clone(&whitelist))?;
-            let to_token = resolve_address(&args.to_token, to_chain, Arc::clone(&whitelist))?;
-            let from_address =
-                resolve_address(&args.from_address, from_chain, Arc::clone(&whitelist))?;
-            let to_address = resolve_address(&args.to_address, to_chain, Arc::clone(&whitelist))?;
+            let from_token = resolver.resolve(&args.from_token, from_chain)?;
+            let to_token = resolver.resolve(&args.to_token, to_chain)?;
+            let from_address = resolver.resolve(&args.from_address, from_chain)?;
+            let to_address = resolver.resolve(&args.to_address, to_chain)?;
             let request = bridge::lifi_types::QuoteRequest::new(
                 args.from_chain,
                 args.to_chain,
@@ -488,12 +485,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let from_token = args
                 .from_token
                 .as_ref()
-                .map(|t| resolve_address(t, from_chain, Arc::clone(&whitelist)))
+                .map(|t| resolver.resolve(t, from_chain))
                 .transpose()?;
             let to_token = args
                 .to_token
                 .as_ref()
-                .map(|t| resolve_address(t, to_chain, Arc::clone(&whitelist)))
+                .map(|t| resolver.resolve(t, to_chain))
                 .transpose()?;
             let request = bridge::lifi_types::ConnectionsRequest::new(
                 args.from_chain,
@@ -509,7 +506,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::GetTransactions(args) => {
             let chain = get_chain_from_string(&args.network).unwrap();
             let evm_interface = EVMInterface::new(&args.network, Arc::clone(&whitelist)).await?;
-            let address = resolve_address(&args.address, chain, Arc::clone(&whitelist))?;
+            let address = resolver.resolve(&args.address, chain)?;
             evm_interface.get_transactions(address.to_string()).await?;
         }
         Command::AddWalletToWhitelist(args) => {
@@ -562,9 +559,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::SwapTokensUniswapV3(args) => {
             let evm_interface = EVMInterface::new(&args.network, whitelist.clone()).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let token_in = resolve_address(&args.token_in, chain, Arc::clone(&whitelist))?;
-            let token_out = resolve_address(&args.token_out, chain, Arc::clone(&whitelist))?;
-            let recipient = resolve_address(&args.recipient, chain, Arc::clone(&whitelist))?;
+            let token_in = resolver.resolve(&args.token_in, chain)?;
+            let token_out = resolver.resolve(&args.token_out, chain)?;
+            let recipient = resolver.resolve(&args.recipient, chain)?;
             evm_interface
                 .swap_tokens_uniswap_v3(
                     token_in.to_string(),
@@ -578,9 +575,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Command::AddLiquidityUniswapV2(args) => {
             let evm_interface = EVMInterface::new(&args.network, whitelist.clone()).await?;
             let chain = get_chain_from_string(&args.network).unwrap();
-            let token_a = resolve_address(&args.token_a, chain, Arc::clone(&whitelist))?;
-            let token_b = resolve_address(&args.token_b, chain, Arc::clone(&whitelist))?;
-            let to = resolve_address(&args.to, chain, Arc::clone(&whitelist))?;
+            let token_a = resolver.resolve(&args.token_a, chain)?;
+            let token_b = resolver.resolve(&args.token_b, chain)?;
+            let to = resolver.resolve(&args.to, chain)?;
             evm_interface
                 .add_liquidity_uniswap_v2(
                     token_a.to_string(),
@@ -607,27 +604,4 @@ fn load_or_create_whitelist() -> Result<Whitelist, Box<dyn std::error::Error>> {
     } else {
         Ok(Whitelist::new())
     }
-}
-
-fn resolve_address(
-    input: &str,
-    chain: Chain,
-    whitelist: Arc<Whitelist>,
-) -> Result<Address, Box<dyn std::error::Error>> {
-    // Check if the input is a valid Ethereum address
-    if let Ok(address) = Address::from_str(input) {
-        return Ok(address);
-    }
-
-    // Check if the input is a whitelisted wallet name
-    if let Some(wallet_info) = whitelist.get_wallet_by_name(input) {
-        return Ok(Address::from_str(&wallet_info.address)?);
-    }
-
-    // Check if the input is a token name in the addressbook
-    if let Some(address) = addressbook::contract_address(input, chain) {
-        return Ok(address);
-    }
-
-    Err(format!("Could not resolve address for: {}", input).into())
 }
